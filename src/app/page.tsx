@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useRef } from "react";
 import {
   Send,
@@ -19,6 +20,11 @@ import {
   FileJson,
   FileText,
   Zap,
+  User,
+  Megaphone,
+  Building2,
+  BarChart3,
+  ListChecks,
 } from "lucide-react";
 
 // ─── Utility ───────────────────────────────────────
@@ -278,6 +284,7 @@ interface TransactionRow {
   amount: string;
   status: string;
   timestamp: string;
+  counterparty: string;
 }
 
 interface ApiResponse {
@@ -291,6 +298,8 @@ interface ApiResponse {
   agent_summary: string;
   recommended_next_action: string;
   customer_reply: string;
+  confidence?: number;
+  reason_codes?: string[];
 }
 
 interface ApiError {
@@ -373,6 +382,7 @@ const EMPTY_TX: TransactionRow = {
   amount: "",
   status: "completed",
   timestamp: "",
+  counterparty: "",
 };
 
 // ─── Sample Templates ──────────────────────────────
@@ -557,70 +567,32 @@ const JSON_TEMPLATE = JSON.stringify(
   2,
 );
 
-// ─── Health Check Button ───────────────────────────
+const CONFIDENCE_COLOR: Record<string, string> = {
+  high: "bg-[var(--success)] text-white",
+  medium: "bg-[var(--warning)] text-black",
+  low: "bg-[var(--muted)] text-[var(--muted-foreground)]",
+};
 
-function HealthCheckButton() {
-  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">(
-    "idle",
-  );
-  const [message, setMessage] = useState("");
+// ─── Health Link ───────────────────────────────────
 
-  async function check() {
-    setStatus("loading");
-    try {
-      const res = await fetch("/health");
-      const data = await res.json();
-      if (res.ok) {
-        setStatus("ok");
-        setMessage(data.status ?? "healthy");
-      } else {
-        setStatus("error");
-        setMessage(data.error ?? "unhealthy");
-      }
-    } catch {
-      setStatus("error");
-      setMessage("unreachable");
-    }
-    setTimeout(() => {
-      setStatus("idle");
-      setMessage("");
-    }, 4000);
-  }
-
+function HealthLink() {
   return (
-    <button
-      type="button"
-      onClick={check}
-      disabled={status === "loading"}
+    <Link
+      href="/health"
+      target="_blank"
       className={cn(
-        "inline-flex items-center gap-2 border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-150",
+        "inline-flex items-center gap-2 border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider",
         "shadow-neo-sm press-inner",
-        status === "ok"
-          ? "border-[var(--border)] bg-[var(--success)] text-white"
-          : status === "error"
-            ? "border-[var(--border)] bg-[var(--destructive)] text-white"
-            : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]",
+        "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]",
       )}
     >
-      {/* Always-visible green dot (active indicator) */}
       <span className="relative flex h-2 w-2">
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--success)] opacity-40" />
         <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--success)]" />
       </span>
-      <HeartPulse
-        className={cn(
-          "h-3.5 w-3.5",
-          status === "loading" && "animate-pulse",
-        )}
-      />
-      {status === "loading"
-        ? "Checking..."
-        : status === "ok"
-          ? `✓ ${message}`
-          : status === "error"
-            ? `✗ ${message}`
-            : "Health"}
-    </button>
+      <HeartPulse className="h-3.5 w-3.5" />
+      Health
+    </Link>
   );
 }
 
@@ -667,6 +639,8 @@ export default function DashboardPage() {
   const [ticketId, setTicketId] = useState("");
   const [complaint, setComplaint] = useState("");
   const [language, setLanguage] = useState("");
+  const [userType, setUserType] = useState("");
+  const [campaignContext, setCampaignContext] = useState("");
   const [transactions, setTransactions] = useState<TransactionRow[]>([
     { ...EMPTY_TX },
   ]);
@@ -678,11 +652,17 @@ export default function DashboardPage() {
   const [jsonInput, setJsonInput] = useState(JSON_TEMPLATE);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const startTime = useRef<number>(0);
+  // Keep previous response visible while loading to avoid UI glitch
+  const [prevResponse, setPrevResponse] = useState<ApiResponse | null>(null);
+  const [prevRawJson, setPrevRawJson] = useState<Record<string, unknown> | null>(null);
+  const [prevElapsedMs, setPrevElapsedMs] = useState<number | null>(null);
 
   function fillTemplate(tpl: TicketTemplate) {
     setTicketId(tpl.ticket_id);
     setComplaint(tpl.complaint);
     setLanguage(tpl.language);
+    setUserType("");
+    setCampaignContext("");
     setTransactions(
       tpl.transaction_history.length > 0
         ? tpl.transaction_history.map((tx) => ({
@@ -691,6 +671,7 @@ export default function DashboardPage() {
             amount: String(tx.amount),
             status: tx.status,
             timestamp: tx.timestamp,
+            counterparty: "",
           }))
         : [{ ...EMPTY_TX }],
     );
@@ -718,10 +699,9 @@ export default function DashboardPage() {
 
   async function submitBody(body: Record<string, unknown>) {
     setLoading(true);
-    setResponse(null);
-    setRawJson(null);
     setError(null);
     setElapsedMs(null);
+    // Don't clear response here — keep previous visible while loading
     startTime.current = performance.now();
 
     try {
@@ -731,15 +711,20 @@ export default function DashboardPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      setElapsedMs(Math.round(performance.now() - startTime.current));
+      const ms = Math.round(performance.now() - startTime.current);
+      setElapsedMs(ms);
       setRawJson(data);
       if (!res.ok) {
+        setResponse(null);
+        setPrevResponse(null);
         setError(data as ApiError);
       } else {
         setResponse(data as ApiResponse);
+        setPrevResponse(null);
       }
     } catch {
-      setElapsedMs(Math.round(performance.now() - startTime.current));
+      const ms = Math.round(performance.now() - startTime.current);
+      setElapsedMs(ms);
       setError({ error: "Unable to reach the server. Is it running?" });
     } finally {
       setLoading(false);
@@ -748,6 +733,15 @@ export default function DashboardPage() {
 
   async function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Save current response as previous so it stays visible during loading
+    if (response) {
+      setPrevResponse(response);
+      setPrevRawJson(rawJson);
+      setPrevElapsedMs(elapsedMs);
+    }
+    setResponse(null);
+    setRawJson(null);
+
     const validTxns = transactions.filter(
       (t) => t.transaction_id.trim() && t.amount.trim(),
     );
@@ -756,14 +750,20 @@ export default function DashboardPage() {
       complaint: complaint.trim(),
     };
     if (language.trim()) body.language = language.trim();
+    if (userType.trim()) body.user_type = userType.trim();
+    if (campaignContext.trim()) body.campaign_context = campaignContext.trim();
     if (validTxns.length > 0) {
-      body.transaction_history = validTxns.map((t) => ({
-        transaction_id: t.transaction_id.trim(),
-        type: t.type,
-        amount: parseFloat(t.amount) || 0,
-        status: t.status,
-        timestamp: t.timestamp || new Date().toISOString(),
-      }));
+      body.transaction_history = validTxns.map((t) => {
+        const entry: Record<string, unknown> = {
+          transaction_id: t.transaction_id.trim(),
+          type: t.type,
+          amount: parseFloat(t.amount) || 0,
+          status: t.status,
+          timestamp: t.timestamp || new Date().toISOString(),
+        };
+        if (t.counterparty.trim()) entry.counterparty = t.counterparty.trim();
+        return entry;
+      });
     }
     await submitBody(body);
   }
@@ -771,6 +771,13 @@ export default function DashboardPage() {
   async function handleJsonSubmit() {
     try {
       const parsed = JSON.parse(jsonInput);
+      if (response) {
+        setPrevResponse(response);
+        setPrevRawJson(rawJson);
+        setPrevElapsedMs(elapsedMs);
+      }
+      setResponse(null);
+      setRawJson(null);
       await submitBody(parsed);
     } catch {
       setError({ error: "Invalid JSON. Please check your input." });
@@ -781,6 +788,11 @@ export default function DashboardPage() {
     error &&
     error.details &&
     error.details.length > 0;
+
+  // Determine what to show in the results column
+  const displayResponse = response || prevResponse;
+  const displayRawJson = rawJson || prevRawJson;
+  const displayElapsedMs = elapsedMs ?? prevElapsedMs;
 
   // ── Templates row ──
   const templatesRow = (
@@ -874,6 +886,36 @@ export default function DashboardPage() {
               onChange={(e) => setLanguage(e.target.value)}
             />
           </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <NeoLabel htmlFor="userType">
+                <span className="inline-flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  User Type
+                </span>
+              </NeoLabel>
+              <NeoInput
+                id="userType"
+                placeholder="e.g. customer, agent, merchant"
+                value={userType}
+                onChange={(e) => setUserType(e.target.value)}
+              />
+            </div>
+            <div>
+              <NeoLabel htmlFor="campaignContext">
+                <span className="inline-flex items-center gap-1">
+                  <Megaphone className="h-3 w-3" />
+                  Campaign Context
+                </span>
+              </NeoLabel>
+              <NeoInput
+                id="campaignContext"
+                placeholder="e.g. cashback promo, fee waiver"
+                value={campaignContext}
+                onChange={(e) => setCampaignContext(e.target.value)}
+              />
+            </div>
+          </div>
           <div>
             <NeoLabel htmlFor="complaint" required>
               Complaint
@@ -914,115 +956,141 @@ export default function DashboardPage() {
           {transactions.map((tx, i) => (
             <div
               key={i}
-              className="grid grid-cols-2 gap-2 border-2 border-[var(--border)] bg-[var(--muted)] p-3 sm:grid-cols-6 sm:gap-2 sm:p-3"
+              className="space-y-2 border-2 border-[var(--border)] bg-[var(--muted)] p-3 sm:p-3"
             >
-              <div className="col-span-2 sm:col-span-1">
-                <NeoLabel
-                  htmlFor={`tx-id-${i}`}
-                  className="mb-0.5 text-[10px]"
-                >
-                  ID
-                </NeoLabel>
-                <NeoInput
-                  id={`tx-id-${i}`}
-                  placeholder="TXN-001"
-                  className="h-9 text-xs"
-                  value={tx.transaction_id}
-                  onChange={(e) =>
-                    updateTransaction(i, "transaction_id", e.target.value)
-                  }
-                />
+              {/* Row 1: ID, Type, Amount, Status */}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 sm:gap-2">
+                <div>
+                  <NeoLabel
+                    htmlFor={`tx-id-${i}`}
+                    className="mb-0.5 text-[10px]"
+                  >
+                    ID
+                  </NeoLabel>
+                  <NeoInput
+                    id={`tx-id-${i}`}
+                    placeholder="TXN-001"
+                    className="h-9 text-xs"
+                    value={tx.transaction_id}
+                    onChange={(e) =>
+                      updateTransaction(i, "transaction_id", e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <NeoLabel
+                    htmlFor={`tx-type-${i}`}
+                    className="mb-0.5 text-[10px]"
+                  >
+                    Type
+                  </NeoLabel>
+                  <NeoSelect
+                    id={`tx-type-${i}`}
+                    className="h-9 text-xs"
+                    value={tx.type}
+                    onChange={(e) =>
+                      updateTransaction(i, "type", e.target.value)
+                    }
+                  >
+                    {TX_TYPES.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </NeoSelect>
+                </div>
+                <div>
+                  <NeoLabel
+                    htmlFor={`tx-amt-${i}`}
+                    className="mb-0.5 text-[10px]"
+                  >
+                    Amount
+                  </NeoLabel>
+                  <NeoInput
+                    id={`tx-amt-${i}`}
+                    placeholder="5000"
+                    type="number"
+                    min="0"
+                    className="h-9 text-xs"
+                    value={tx.amount}
+                    onChange={(e) =>
+                      updateTransaction(i, "amount", e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <NeoLabel
+                    htmlFor={`tx-status-${i}`}
+                    className="mb-0.5 text-[10px]"
+                  >
+                    Status
+                  </NeoLabel>
+                  <NeoSelect
+                    id={`tx-status-${i}`}
+                    className="h-9 text-xs"
+                    value={tx.status}
+                    onChange={(e) =>
+                      updateTransaction(i, "status", e.target.value)
+                    }
+                  >
+                    {TX_STATUSES.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </NeoSelect>
+                </div>
               </div>
-              <div className="col-span-1 sm:col-span-1">
-                <NeoLabel
-                  htmlFor={`tx-type-${i}`}
-                  className="mb-0.5 text-[10px]"
-                >
-                  Type
-                </NeoLabel>
-                <NeoSelect
-                  id={`tx-type-${i}`}
-                  className="h-9 text-xs"
-                  value={tx.type}
-                  onChange={(e) =>
-                    updateTransaction(i, "type", e.target.value)
-                  }
-                >
-                  {TX_TYPES.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </NeoSelect>
-              </div>
-              <div className="col-span-1 sm:col-span-1">
-                <NeoLabel
-                  htmlFor={`tx-amt-${i}`}
-                  className="mb-0.5 text-[10px]"
-                >
-                  Amount
-                </NeoLabel>
-                <NeoInput
-                  id={`tx-amt-${i}`}
-                  placeholder="5000"
-                  type="number"
-                  min="0"
-                  className="h-9 text-xs"
-                  value={tx.amount}
-                  onChange={(e) =>
-                    updateTransaction(i, "amount", e.target.value)
-                  }
-                />
-              </div>
-              <div className="col-span-1 sm:col-span-1">
-                <NeoLabel
-                  htmlFor={`tx-status-${i}`}
-                  className="mb-0.5 text-[10px]"
-                >
-                  Status
-                </NeoLabel>
-                <NeoSelect
-                  id={`tx-status-${i}`}
-                  className="h-9 text-xs"
-                  value={tx.status}
-                  onChange={(e) =>
-                    updateTransaction(i, "status", e.target.value)
-                  }
-                >
-                  {TX_STATUSES.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </NeoSelect>
-              </div>
-              <div className="col-span-1 sm:col-span-1">
-                <NeoLabel
-                  htmlFor={`tx-ts-${i}`}
-                  className="mb-0.5 text-[10px]"
-                >
-                  Timestamp
-                </NeoLabel>
-                <NeoInput
-                  id={`tx-ts-${i}`}
-                  placeholder="ISO date"
-                  className="h-9 text-xs"
-                  value={tx.timestamp}
-                  onChange={(e) =>
-                    updateTransaction(i, "timestamp", e.target.value)
-                  }
-                />
-              </div>
-              <div className="col-span-2 flex items-end justify-end sm:col-span-1">
-                <NeoButton
-                  type="button"
-                  variant="danger"
-                  className="h-9 w-full px-0 text-xs sm:w-auto sm:px-3"
-                  onClick={() => removeTransaction(i)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 sm:mr-1" />
-                  <span className="sm:hidden">Remove</span>
-                </NeoButton>
+              {/* Row 2: Timestamp, Counterparty, Remove */}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-2">
+                <div>
+                  <NeoLabel
+                    htmlFor={`tx-ts-${i}`}
+                    className="mb-0.5 text-[10px]"
+                  >
+                    Timestamp
+                  </NeoLabel>
+                  <NeoInput
+                    id={`tx-ts-${i}`}
+                    placeholder="ISO date"
+                    className="h-9 text-xs"
+                    value={tx.timestamp}
+                    onChange={(e) =>
+                      updateTransaction(i, "timestamp", e.target.value)
+                    }
+                  />
+                </div>
+                <div>
+                  <NeoLabel
+                    htmlFor={`tx-cp-${i}`}
+                    className="mb-0.5 text-[10px]"
+                  >
+                    <span className="inline-flex items-center gap-0.5">
+                      <Building2 className="h-2.5 w-2.5" />
+                      Counterparty
+                    </span>
+                  </NeoLabel>
+                  <NeoInput
+                    id={`tx-cp-${i}`}
+                    placeholder="Phone/merchant"
+                    className="h-9 text-xs"
+                    value={tx.counterparty}
+                    onChange={(e) =>
+                      updateTransaction(i, "counterparty", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="flex items-end justify-end sm:items-end">
+                  <NeoButton
+                    type="button"
+                    variant="danger"
+                    className="h-9 w-full px-0 text-xs sm:w-auto sm:px-3"
+                    onClick={() => removeTransaction(i)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 sm:mr-1" />
+                    <span className="sm:hidden">Remove</span>
+                  </NeoButton>
+                </div>
               </div>
             </div>
           ))}
@@ -1087,6 +1155,20 @@ export default function DashboardPage() {
   // ── Results ──
   const resultsSection = (
     <div className="space-y-5 sm:space-y-6">
+      {/* Loading overlay on previous response */}
+      {loading && displayResponse && (
+        <NeoCard>
+          <NeoCardContent>
+            <div className="flex items-center justify-center gap-3 py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-[var(--accent)]" />
+              <p className="text-sm font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Analyzing next ticket&hellip;
+              </p>
+            </div>
+          </NeoCardContent>
+        </NeoCard>
+      )}
+
       {/* Error */}
       {error && (
         <NeoCard hover macDots>
@@ -1120,61 +1202,125 @@ export default function DashboardPage() {
       )}
 
       {/* Response */}
-      {response && (
+      {displayResponse && (
         <>
-          {/* Result header + timer */}
-          <div className="flex items-center justify-between gap-2 border-b-2 border-[var(--border)] pb-3">
+          {/* Result header + timer + confidence */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-[var(--border)] pb-3">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-6 w-6 shrink-0 text-[var(--success)]" />
               <h2 className="text-xl font-black uppercase tracking-tight sm:text-2xl">
                 Analysis Result
               </h2>
             </div>
-            {elapsedMs !== null && (
-              <span className="inline-flex shrink-0 items-center gap-1.5 border-2 border-[var(--border)] bg-[var(--card)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-neo-sm">
-                <Clock className="h-3 w-3" />
-                {elapsedMs < 1000
-                  ? `${elapsedMs}ms`
-                  : `${(elapsedMs / 1000).toFixed(1)}s`}
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Confidence badge */}
+              {displayResponse.confidence !== undefined && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 border-2 border-[var(--border)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-neo-sm",
+                    displayResponse.confidence >= 0.7
+                      ? CONFIDENCE_COLOR.high
+                      : displayResponse.confidence >= 0.3
+                        ? CONFIDENCE_COLOR.medium
+                        : CONFIDENCE_COLOR.low,
+                  )}
+                >
+                  <BarChart3 className="h-3 w-3" />
+                  {Math.round(displayResponse.confidence * 100)}%
+                </span>
+              )}
+              {/* Timer */}
+              {displayElapsedMs !== null && (
+                <span className="inline-flex shrink-0 items-center gap-1.5 border-2 border-[var(--border)] bg-[var(--card)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-neo-sm">
+                  <Clock className="h-3 w-3" />
+                  {displayElapsedMs < 1000
+                    ? `${displayElapsedMs}ms`
+                    : `${(displayElapsedMs / 1000).toFixed(1)}s`}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Badges */}
-          <div className="flex flex-wrap gap-2">
-            <NeoBadge
-              className={
-                VERDICT_STYLES[response.evidence_verdict] ?? ""
-              }
-            >
-              {response.evidence_verdict.replace(/_/g, " ")}
-            </NeoBadge>
-            <NeoBadge
-              className={SEVERITY_STYLES[response.severity] ?? ""}
-            >
-              {response.severity}
-            </NeoBadge>
-            <NeoBadge className={YELLOW_BADGE}>
-              {CASE_TYPE_LABELS[response.case_type] ??
-                response.case_type.replace(/_/g, " ")}
-            </NeoBadge>
-            <NeoBadge className={YELLOW_BADGE}>
-              {DEPARTMENT_LABELS[response.department] ??
-                response.department.replace(/_/g, " ")}
-            </NeoBadge>
-            {response.human_review_required && (
-              <NeoBadge className="bg-orange-500 text-white">
-                Needs Human Review
+          {/* Reason codes */}
+          {displayResponse.reason_codes &&
+            displayResponse.reason_codes.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <ListChecks className="h-3.5 w-3.5 shrink-0 text-[var(--muted-foreground)]" />
+                {displayResponse.reason_codes.map((code) => (
+                  <span
+                    key={code}
+                    className="inline-flex items-center border-2 border-[var(--border)] bg-[var(--card)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                  >
+                    {code.replace(/_/g, " ")}
+                  </span>
+                ))}
+              </div>
+            )}
+
+          {/* Badges with title labels — stacked vertically */}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 border-2 border-[var(--border)] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Verdict
+              </span>
+              <NeoBadge
+                className={
+                  VERDICT_STYLES[displayResponse.evidence_verdict] ?? ""
+                }
+              >
+                {displayResponse.evidence_verdict.replace(/_/g, " ")}
               </NeoBadge>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 border-2 border-[var(--border)] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Severity
+              </span>
+              <NeoBadge
+                className={SEVERITY_STYLES[displayResponse.severity] ?? ""}
+              >
+                {displayResponse.severity}
+              </NeoBadge>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 border-2 border-[var(--border)] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Case
+              </span>
+              <NeoBadge className={YELLOW_BADGE}>
+                {CASE_TYPE_LABELS[displayResponse.case_type] ??
+                  displayResponse.case_type.replace(/_/g, " ")}
+              </NeoBadge>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 border-2 border-[var(--border)] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Dept
+              </span>
+              <NeoBadge className={YELLOW_BADGE}>
+                {DEPARTMENT_LABELS[displayResponse.department] ??
+                  displayResponse.department.replace(/_/g, " ")}
+              </NeoBadge>
+            </div>
+
+            {displayResponse.human_review_required && (
+              <div className="flex items-center gap-1.5 sm:col-span-2">
+                <span className="inline-flex items-center gap-1 border-2 border-[var(--border)] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                  Flag
+                </span>
+                <NeoBadge className="bg-orange-500 text-white">
+                  Needs Human Review
+                </NeoBadge>
+              </div>
             )}
           </div>
 
           {/* Matched transaction */}
-          {response.relevant_transaction_id && (
+          {displayResponse.relevant_transaction_id && (
             <p className="text-sm font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
               Matched transaction:{" "}
               <code className="ml-1 border-2 border-[var(--border)] bg-[var(--accent)] px-2 py-0.5 font-mono text-xs text-black">
-                {response.relevant_transaction_id}
+                {displayResponse.relevant_transaction_id}
               </code>
             </p>
           )}
@@ -1188,7 +1334,7 @@ export default function DashboardPage() {
             </NeoCardHeader>
             <NeoCardContent>
               <p className="text-sm leading-relaxed font-medium">
-                {response.agent_summary}
+                {displayResponse.agent_summary}
               </p>
             </NeoCardContent>
           </NeoCard>
@@ -1202,7 +1348,7 @@ export default function DashboardPage() {
             </NeoCardHeader>
             <NeoCardContent>
               <p className="whitespace-pre-line text-sm leading-relaxed font-medium">
-                {response.recommended_next_action}
+                {displayResponse.recommended_next_action}
               </p>
             </NeoCardContent>
           </NeoCard>
@@ -1216,7 +1362,7 @@ export default function DashboardPage() {
             </NeoCardHeader>
             <NeoCardContent>
               <p className="whitespace-pre-line text-sm leading-relaxed font-medium">
-                {response.customer_reply}
+                {displayResponse.customer_reply}
               </p>
             </NeoCardContent>
           </NeoCard>
@@ -1224,7 +1370,7 @@ export default function DashboardPage() {
       )}
 
       {/* Raw JSON */}
-      {rawJson && <JsonOutput data={rawJson} />}
+      {displayRawJson && <JsonOutput data={displayRawJson} />}
     </div>
   );
 
@@ -1232,7 +1378,7 @@ export default function DashboardPage() {
     <div className="relative mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
       {/* Health check — top-right */}
       <div className="mb-4 flex items-start justify-end sm:mb-0 sm:absolute sm:right-6 sm:top-6 sm:z-10">
-        <HealthCheckButton />
+        <HealthLink />
       </div>
 
       {/* ── Hero ── */}
@@ -1262,9 +1408,12 @@ export default function DashboardPage() {
 
         {/* Right: Results */}
         <div className="min-w-0">
-          {!response && !error && !rawJson && (
+          {!displayResponse && !error && !displayRawJson && (
             <div className="sticky top-8">
-              <NeoCard className="border-dashed border-[var(--input-border)] shadow-none" macDots>
+              <NeoCard
+                className="border-dashed border-[var(--input-border)] shadow-none"
+                macDots
+              >
                 <NeoCardContent>
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Terminal className="mb-4 h-10 w-10 text-[var(--muted-foreground)]" />
@@ -1279,7 +1428,8 @@ export default function DashboardPage() {
               </NeoCard>
             </div>
           )}
-          {(response || error || rawJson !== null) && resultsSection}
+          {(displayResponse || error || displayRawJson !== null) &&
+            resultsSection}
         </div>
       </div>
     </div>

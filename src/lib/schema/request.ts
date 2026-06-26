@@ -12,6 +12,7 @@ export const TransactionSchema = z.object({
   receiver: z.string().optional(),
   description: z.string().optional(),
   channel: Channel.optional(),
+  counterparty: z.string().optional(),
 });
 export type Transaction = z.infer<typeof TransactionSchema>;
 
@@ -23,5 +24,7 @@ export const TicketRequestSchema = z.object({
     .min(1, "Complaint text is required")
     .max(10000, "Complaint text too long"),
   transaction_history: z.array(TransactionSchema).default([]),
+  user_type: z.string().optional(),
+  campaign_context: z.string().optional(),
 });
 export type TicketRequest = z.infer<typeof TicketRequestSchema>;

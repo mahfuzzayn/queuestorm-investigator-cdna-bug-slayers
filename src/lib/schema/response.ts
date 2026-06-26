@@ -17,5 +17,7 @@ export const TicketResponseSchema = z.object({
   agent_summary: z.string(),
   recommended_next_action: z.string(),
   customer_reply: z.string(),
+  confidence: z.number().min(0).max(1).optional(),
+  reason_codes: z.array(z.string()).optional(),
 });
 export type TicketResponse = z.infer<typeof TicketResponseSchema>;
