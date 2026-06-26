@@ -1,49 +1,134 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Loader2, AlertCircle, CheckCircle2, Plus, Trash2, ChevronDown } from "lucide-react";
+import { useState, useRef } from "react";
+import {
+  Send,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Plus,
+  Trash2,
+  ChevronDown,
+  Ticket,
+  Sparkles,
+  Terminal,
+  Eye,
+  EyeOff,
+  HeartPulse,
+  Clock,
+  FileJson,
+  FileText,
+  Zap,
+} from "lucide-react";
 
-// --- UI Components (inline for zero external deps) ---
+// ─── Utility ───────────────────────────────────────
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-function Card({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+// ─── Mac Window Dots (decorative) ───────────────────
+
+function MacWindowDots() {
+  return (
+    <div className="absolute -top-[1px] -left-[1px] flex items-center gap-[5px] px-3 py-[9px] sm:px-4 sm:py-[11px]">
+      <span className="h-[10px] w-[10px] rounded-full border border-black/20 bg-[#ff5f57] sm:h-3 sm:w-3" />
+      <span className="h-[10px] w-[10px] rounded-full border border-black/20 bg-[#febc2e] sm:h-3 sm:w-3" />
+      <span className="h-[10px] w-[10px] rounded-full border border-black/20 bg-[#28c840] sm:h-3 sm:w-3" />
+    </div>
+  );
+}
+
+// ─── Neobrutalism UI Primitives ────────────────────
+
+function NeoCard({
+  className,
+  children,
+  hover = false,
+  macDots = false,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  hover?: boolean;
+  macDots?: boolean;
+}) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)] shadow-sm",
+        "relative border-2 border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)]",
+        "shadow-neo",
+        "transition-[box-shadow,transform] duration-150 ease",
+        hover && "press-inner",
+        macDots && "pt-[34px] sm:pt-[38px]",
         className,
       )}
       {...props}
     >
+      {macDots && <MacWindowDots />}
       {children}
     </div>
   );
 }
 
-function CardHeader({ className, children }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex flex-col gap-1.5 px-5 pt-5 pb-0 sm:px-6 sm:pt-6", className)}>{children}</div>;
+function NeoCardHeader({
+  className,
+  children,
+  macDots = false,
+}: React.HTMLAttributes<HTMLDivElement> & { macDots?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "relative border-b-2 border-[var(--border)] px-5 py-4 sm:px-6 sm:py-5",
+        macDots && "pt-[34px] sm:pt-[38px]",
+        className,
+      )}
+    >
+      {macDots && <MacWindowDots />}
+      {children}
+    </div>
+  );
 }
 
-function CardTitle({ className, children }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn("font-semibold text-lg tracking-tight", className)}>{children}</h3>;
+function NeoCardTitle({
+  className,
+  children,
+}: React.HTMLAttributes<HTMLHeadingElement>) {
+  return (
+    <h3
+      className={cn(
+        "font-extrabold text-lg uppercase tracking-tight sm:text-xl",
+        className,
+      )}
+    >
+      {children}
+    </h3>
+  );
 }
 
-function CardContent({ className, children }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-5 pt-4 sm:p-6 sm:pt-4", className)}>{children}</div>;
+function NeoCardContent({
+  className,
+  children,
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn("px-5 py-4 sm:px-6 sm:py-5", className)}>
+      {children}
+    </div>
+  );
 }
 
-function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+function NeoInput({
+  className,
+  id,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { id?: string }) {
   return (
     <input
+      id={id}
       className={cn(
-        "flex h-10 w-full rounded-lg border border-[var(--input)] bg-transparent px-3 py-2 text-sm shadow-sm transition-colors",
-        "file:border-0 file:bg-transparent file:text-sm file:font-medium",
-        "placeholder:text-[var(--muted-foreground)]",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "block h-11 w-full border-2 border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-bold text-[var(--foreground)]",
+        "placeholder:text-[var(--muted-foreground)] placeholder:font-normal",
+        "focus:border-[var(--accent)] focus:shadow-[2px_2px_0px_0px_var(--accent)] focus:outline-none",
+        "transition-[box-shadow,border-color] duration-120 ease",
+        "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--muted)]",
         className,
       )}
       {...props}
@@ -51,14 +136,21 @@ function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputEleme
   );
 }
 
-function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+function NeoTextarea({
+  className,
+  id,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { id?: string }) {
   return (
     <textarea
+      id={id}
       className={cn(
-        "flex min-h-[100px] w-full rounded-lg border border-[var(--input)] bg-transparent px-3 py-2 text-sm shadow-sm transition-colors",
-        "placeholder:text-[var(--muted-foreground)]",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "block min-h-[120px] w-full border-2 border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 text-sm font-bold text-[var(--foreground)]",
+        "placeholder:text-[var(--muted-foreground)] placeholder:font-normal",
+        "focus:border-[var(--accent)] focus:shadow-[2px_2px_0px_0px_var(--accent)] focus:outline-none",
+        "transition-[box-shadow,border-color] duration-120 ease",
+        "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-[var(--muted)]",
+        "resize-y",
         className,
       )}
       {...props}
@@ -66,13 +158,20 @@ function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLText
   );
 }
 
-function Select({ className, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+function NeoSelect({
+  className,
+  id,
+  children,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement> & { id?: string }) {
   return (
     <div className="relative">
       <select
+        id={id}
         className={cn(
-          "h-10 w-full appearance-none rounded-lg border border-[var(--input)] bg-transparent px-3 py-2 pr-8 text-sm shadow-sm transition-colors",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]",
+          "block h-11 w-full appearance-none border-2 border-[var(--input-border)] bg-[var(--input-bg)] px-3 py-2 pr-9 text-sm font-bold text-[var(--foreground)]",
+          "focus:border-[var(--accent)] focus:shadow-[2px_2px_0px_0px_var(--accent)] focus:outline-none",
+          "transition-[box-shadow,border-color] duration-120 ease",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
@@ -80,25 +179,89 @@ function Select({ className, children, ...props }: React.SelectHTMLAttributes<HT
       >
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
     </div>
   );
 }
 
-function Label({ className, children, required }: { className?: string; children: React.ReactNode; required?: boolean }) {
+function NeoLabel({
+  className,
+  children,
+  htmlFor,
+  required,
+}: {
+  className?: string;
+  children: React.ReactNode;
+  htmlFor?: string;
+  required?: boolean;
+}) {
   return (
-    <label className={cn("mb-1.5 block text-sm font-medium", className)}>
+    <label
+      htmlFor={htmlFor}
+      className={cn(
+        "mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]",
+        className,
+      )}
+    >
       {children}
-      {required && <span className="ml-0.5 text-[var(--destructive)]">*</span>}
+      {required && (
+        <span className="ml-1 text-[var(--destructive)]">*</span>
+      )}
     </label>
   );
 }
 
-function Badge({ className, children }: { className?: string; children: React.ReactNode }) {
+function NeoButton({
+  className,
+  variant = "primary",
+  loading,
+  children,
+  ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "accent" | "outline" | "ghost" | "danger";
+  loading?: boolean;
+}) {
+  const variants: Record<string, string> = {
+    primary:
+      "bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--border)] hover:bg-[#2a2a2a]",
+    accent:
+      "bg-[var(--accent)] text-[var(--accent-foreground)] border-[var(--border)] hover:bg-[#e6c200]",
+    outline:
+      "bg-transparent text-[var(--foreground)] border-[var(--border)] hover:bg-[var(--muted)]",
+    ghost:
+      "bg-transparent text-[var(--foreground)] border-transparent hover:bg-[var(--muted)]",
+    danger:
+      "bg-[var(--destructive)] text-[var(--destructive-foreground)] border-[var(--destructive)] hover:bg-[#c0392b]",
+  };
+
+  return (
+    <button
+      className={cn(
+        "inline-flex items-center justify-center gap-2 border-2 px-5 py-2.5 text-sm font-bold uppercase tracking-wide",
+        "shadow-neo-sm press-inner",
+        "disabled:pointer-events-none disabled:opacity-40",
+        variants[variant],
+        className,
+      )}
+      {...props}
+    >
+      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      {!loading && children}
+    </button>
+  );
+}
+
+function NeoBadge({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
+        "inline-flex items-center border-2 border-[var(--border)] px-3 py-1 text-xs font-bold uppercase tracking-wider",
         className,
       )}
     >
@@ -107,39 +270,7 @@ function Badge({ className, children }: { className?: string; children: React.Re
   );
 }
 
-function Button({ className, variant = "default", loading, children, ...props }:
-  React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: "default" | "outline" | "ghost" | "destructive";
-    loading?: boolean;
-  }) {
-  const variants: Record<string, string> = {
-    default:
-      "bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 shadow-sm",
-    outline:
-      "border border-[var(--border)] bg-transparent hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]",
-    ghost: "hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]",
-    destructive:
-      "border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900",
-  };
-
-  return (
-    <button
-      className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
-        "disabled:pointer-events-none disabled:opacity-50",
-        variants[variant],
-        className,
-      )}
-      {...props}
-    >
-      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-      {children}
-    </button>
-  );
-}
-
-// --- Types ---
+// ─── Types ─────────────────────────────────────────
 
 interface TransactionRow {
   transaction_id: string;
@@ -167,26 +298,42 @@ interface ApiError {
   details?: { field: string; message: string }[];
 }
 
-// --- Constants ---
+interface TicketTemplate {
+  label: string;
+  ticket_id: string;
+  language: string;
+  complaint: string;
+  transaction_history: {
+    transaction_id: string;
+    type: string;
+    amount: number;
+    status: string;
+    timestamp: string;
+  }[];
+}
+
+// ─── Constants ─────────────────────────────────────
 
 const SEVERITY_STYLES: Record<string, string> = {
-  low: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  high: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  critical: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  low: "bg-[var(--info)] text-white",
+  medium: "bg-[var(--warning)] text-black",
+  high: "bg-orange-500 text-white",
+  critical: "bg-[var(--destructive)] text-white",
 };
 
 const VERDICT_STYLES: Record<string, string> = {
-  consistent: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  inconsistent: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  insufficient_data: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
+  consistent: "bg-[var(--success)] text-white",
+  inconsistent: "bg-[var(--destructive)] text-white",
+  insufficient_data: "bg-[var(--muted)] text-[var(--muted-foreground)]",
 };
 
+const YELLOW_BADGE = "bg-[var(--accent)] text-black";
+
 const CASE_TYPE_LABELS: Record<string, string> = {
-  phishing_or_social_engineering: "Phishing / Social Engineering",
+  phishing_or_social_engineering: "Phishing",
   duplicate_payment: "Duplicate Payment",
   agent_cash_in_issue: "Agent Cash-in Issue",
-  merchant_settlement_delay: "Merchant Settlement Delay",
+  merchant_settlement_delay: "Merchant Settlement",
   payment_failed: "Payment Failed",
   wrong_transfer: "Wrong Transfer",
   refund_request: "Refund Request",
@@ -203,6 +350,23 @@ const DEPARTMENT_LABELS: Record<string, string> = {
   refunds_and_adjustments: "Refunds & Adjustments",
 };
 
+const TX_TYPES = [
+  { value: "send_money", label: "Send Money" },
+  { value: "cash_in", label: "Cash In" },
+  { value: "cash_out", label: "Cash Out" },
+  { value: "payment", label: "Payment" },
+  { value: "refund", label: "Refund" },
+  { value: "transfer", label: "Transfer" },
+];
+
+const TX_STATUSES = [
+  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending" },
+  { value: "failed", label: "Failed" },
+  { value: "disputed", label: "Disputed" },
+  { value: "reversed", label: "Reversed" },
+];
+
 const EMPTY_TX: TransactionRow = {
   transaction_id: "",
   type: "send_money",
@@ -211,23 +375,340 @@ const EMPTY_TX: TransactionRow = {
   timestamp: "",
 };
 
-// --- Page ---
+// ─── Sample Templates ──────────────────────────────
+
+const TICKET_TEMPLATES: TicketTemplate[] = [
+  {
+    label: "Phishing Call",
+    ticket_id: "TKT-001",
+    language: "en",
+    complaint:
+      "I received a call from someone claiming to be from bKash customer care. They asked me for my OTP and PIN. I gave them the OTP and now money is missing from my account.",
+    transaction_history: [
+      {
+        transaction_id: "TXN-001",
+        type: "send_money",
+        amount: 15000,
+        status: "completed",
+        timestamp: "2026-06-24T14:30:00Z",
+      },
+    ],
+  },
+  {
+    label: "Duplicate Deduction",
+    ticket_id: "TKT-002",
+    language: "bn",
+    complaint:
+      "আমার একাউন্ট থেকে দুইবার টাকা কেটেছে। আমি ৫০০০ টাকা পাঠিয়েছিলাম কিন্তু দুইবার কেটে গেছে।",
+    transaction_history: [
+      {
+        transaction_id: "TXN-002a",
+        type: "send_money",
+        amount: 5000,
+        status: "completed",
+        timestamp: "2026-06-25T10:00:00Z",
+      },
+      {
+        transaction_id: "TXN-002b",
+        type: "send_money",
+        amount: 5000,
+        status: "completed",
+        timestamp: "2026-06-25T10:01:00Z",
+      },
+    ],
+  },
+  {
+    label: "Agent Cash-in",
+    ticket_id: "TKT-003",
+    language: "en",
+    complaint:
+      "I went to an agent to deposit 2000 taka into my bKash account. The agent took my cash but the money never arrived in my account.",
+    transaction_history: [
+      {
+        transaction_id: "TXN-003",
+        type: "cash_in",
+        amount: 2000,
+        status: "pending",
+        timestamp: "2026-06-26T09:00:00Z",
+      },
+    ],
+  },
+  {
+    label: "Merchant Settlement",
+    ticket_id: "TKT-004",
+    language: "en",
+    complaint:
+      "As a merchant, I have not received my settlement payment for the last 3 days. My customers have paid but the money is not showing in my merchant account.",
+    transaction_history: [
+      {
+        transaction_id: "TXN-004",
+        type: "payment",
+        amount: 35000,
+        status: "completed",
+        timestamp: "2026-06-23T16:00:00Z",
+      },
+    ],
+  },
+  {
+    label: "Failed Payment",
+    ticket_id: "TKT-005",
+    language: "en",
+    complaint:
+      "I tried to send 2500 taka to my friend but the transaction failed. However, the money was deducted from my account balance.",
+    transaction_history: [
+      {
+        transaction_id: "TXN-005",
+        type: "send_money",
+        amount: 2500,
+        status: "failed",
+        timestamp: "2026-06-26T11:30:00Z",
+      },
+    ],
+  },
+  {
+    label: "Wrong Transfer",
+    ticket_id: "TKT-006",
+    language: "en",
+    complaint:
+      "I sent 10000 taka to a wrong number by mistake. I misdialed one digit and now the money went to someone else. Please help me get it back.",
+    transaction_history: [
+      {
+        transaction_id: "TXN-006",
+        type: "send_money",
+        amount: 10000,
+        status: "completed",
+        timestamp: "2026-06-26T08:15:00Z",
+      },
+    ],
+  },
+  {
+    label: "Refund Request",
+    ticket_id: "TKT-007",
+    language: "en",
+    complaint:
+      "I would like to request a refund for a payment I made to a merchant. The product was not delivered and I want my money back.",
+    transaction_history: [
+      {
+        transaction_id: "TXN-007",
+        type: "payment",
+        amount: 8000,
+        status: "completed",
+        timestamp: "2026-06-20T14:00:00Z",
+      },
+    ],
+  },
+  {
+    label: "Unauthorized TX",
+    ticket_id: "TKT-008",
+    language: "bn",
+    complaint:
+      "আমার bKash অ্যাকাউন্ট থেকে ৭০০০ টাকা কেটে গেছে কিন্তু আমি কোনো ট্রানজেকশন করিনি। আমি কিছু কিনিনি বা কাউকে টাকা পাঠাইনি। দয়া করে আমার টাকা ফেরত দিন।",
+    transaction_history: [
+      {
+        transaction_id: "TXN-008",
+        type: "send_money",
+        amount: 7000,
+        status: "completed",
+        timestamp: "2026-06-24T19:00:00Z",
+      },
+    ],
+  },
+  {
+    label: "Just Checking",
+    ticket_id: "TKT-009",
+    language: "en",
+    complaint: "I am just checking my account balance. Everything seems fine.",
+    transaction_history: [],
+  },
+  {
+    label: "ATM Cash-out",
+    ticket_id: "TKT-010",
+    language: "en",
+    complaint:
+      "Yesterday I tried to cash out 15000 taka from an ATM but the machine dispensed less money. It showed successful on screen but I only got 14000.",
+    transaction_history: [
+      {
+        transaction_id: "TXN-010",
+        type: "cash_out",
+        amount: 15000,
+        status: "completed",
+        timestamp: "2026-06-25T13:00:00Z",
+      },
+    ],
+  },
+];
+
+const JSON_TEMPLATE = JSON.stringify(
+  {
+    ticket_id: "TKT-001",
+    language: "en",
+    complaint: "Describe the issue here...",
+    transaction_history: [
+      {
+        transaction_id: "TXN-001",
+        type: "send_money",
+        amount: 5000,
+        status: "completed",
+        timestamp: "2026-06-25T10:00:00Z",
+      },
+    ],
+  },
+  null,
+  2,
+);
+
+// ─── Health Check Button ───────────────────────────
+
+function HealthCheckButton() {
+  const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">(
+    "idle",
+  );
+  const [message, setMessage] = useState("");
+
+  async function check() {
+    setStatus("loading");
+    try {
+      const res = await fetch("/health");
+      const data = await res.json();
+      if (res.ok) {
+        setStatus("ok");
+        setMessage(data.status ?? "healthy");
+      } else {
+        setStatus("error");
+        setMessage(data.error ?? "unhealthy");
+      }
+    } catch {
+      setStatus("error");
+      setMessage("unreachable");
+    }
+    setTimeout(() => {
+      setStatus("idle");
+      setMessage("");
+    }, 4000);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={check}
+      disabled={status === "loading"}
+      className={cn(
+        "inline-flex items-center gap-2 border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-150",
+        "shadow-neo-sm press-inner",
+        status === "ok"
+          ? "border-[var(--border)] bg-[var(--success)] text-white"
+          : status === "error"
+            ? "border-[var(--border)] bg-[var(--destructive)] text-white"
+            : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]",
+      )}
+    >
+      {/* Always-visible green dot (active indicator) */}
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--success)] opacity-40" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--success)]" />
+      </span>
+      <HeartPulse
+        className={cn(
+          "h-3.5 w-3.5",
+          status === "loading" && "animate-pulse",
+        )}
+      />
+      {status === "loading"
+        ? "Checking..."
+        : status === "ok"
+          ? `✓ ${message}`
+          : status === "error"
+            ? `✗ ${message}`
+            : "Health"}
+    </button>
+  );
+}
+
+// ─── JSON Output ───────────────────────────────────
+
+function JsonOutput({ data }: { data: Record<string, unknown> }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <NeoCard macDots>
+      <NeoCardHeader>
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="flex w-full items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <Terminal className="h-5 w-5 shrink-0" />
+            <NeoCardTitle className="text-sm sm:text-base">
+              Raw JSON Response
+            </NeoCardTitle>
+          </div>
+          {open ? (
+            <EyeOff className="h-4 w-4 text-[var(--muted-foreground)]" />
+          ) : (
+            <Eye className="h-4 w-4 text-[var(--muted-foreground)]" />
+          )}
+        </button>
+      </NeoCardHeader>
+      {open && (
+        <NeoCardContent>
+          <pre className="overflow-x-auto rounded border-2 border-[var(--input-border)] bg-[#fafaf5] p-4 text-xs leading-relaxed">
+            <code>{JSON.stringify(data, null, 2)}</code>
+          </pre>
+        </NeoCardContent>
+      )}
+    </NeoCard>
+  );
+}
+
+// ─── Page ──────────────────────────────────────────
 
 export default function DashboardPage() {
   const [ticketId, setTicketId] = useState("");
   const [complaint, setComplaint] = useState("");
   const [language, setLanguage] = useState("");
-  const [transactions, setTransactions] = useState<TransactionRow[]>([{ ...EMPTY_TX }]);
+  const [transactions, setTransactions] = useState<TransactionRow[]>([
+    { ...EMPTY_TX },
+  ]);
   const [response, setResponse] = useState<ApiResponse | null>(null);
+  const [rawJson, setRawJson] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
+  const [inputMode, setInputMode] = useState<"form" | "json">("form");
+  const [jsonInput, setJsonInput] = useState(JSON_TEMPLATE);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  const startTime = useRef<number>(0);
+
+  function fillTemplate(tpl: TicketTemplate) {
+    setTicketId(tpl.ticket_id);
+    setComplaint(tpl.complaint);
+    setLanguage(tpl.language);
+    setTransactions(
+      tpl.transaction_history.length > 0
+        ? tpl.transaction_history.map((tx) => ({
+            transaction_id: tx.transaction_id,
+            type: tx.type,
+            amount: String(tx.amount),
+            status: tx.status,
+            timestamp: tx.timestamp,
+          }))
+        : [{ ...EMPTY_TX }],
+    );
+    setInputMode("form");
+  }
 
   function addTransaction() {
     setTransactions([...transactions, { ...EMPTY_TX }]);
   }
 
-  function updateTransaction(index: number, field: keyof TransactionRow, value: string) {
-    setTransactions(transactions.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
+  function updateTransaction(
+    index: number,
+    field: keyof TransactionRow,
+    value: string,
+  ) {
+    setTransactions(
+      transactions.map((t, i) => (i === index ? { ...t, [field]: value } : t)),
+    );
   }
 
   function removeTransaction(index: number) {
@@ -235,14 +716,45 @@ export default function DashboardPage() {
     setTransactions(next.length === 0 ? [{ ...EMPTY_TX }] : next);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submitBody(body: Record<string, unknown>) {
     setLoading(true);
     setResponse(null);
+    setRawJson(null);
     setError(null);
+    setElapsedMs(null);
+    startTime.current = performance.now();
 
-    const validTxns = transactions.filter((t) => t.transaction_id.trim() && t.amount.trim());
-    const body: Record<string, unknown> = { ticket_id: ticketId.trim(), complaint: complaint.trim() };
+    try {
+      const res = await fetch("/analyze-ticket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      setElapsedMs(Math.round(performance.now() - startTime.current));
+      setRawJson(data);
+      if (!res.ok) {
+        setError(data as ApiError);
+      } else {
+        setResponse(data as ApiResponse);
+      }
+    } catch {
+      setElapsedMs(Math.round(performance.now() - startTime.current));
+      setError({ error: "Unable to reach the server. Is it running?" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleFormSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const validTxns = transactions.filter(
+      (t) => t.transaction_id.trim() && t.amount.trim(),
+    );
+    const body: Record<string, unknown> = {
+      ticket_id: ticketId.trim(),
+      complaint: complaint.trim(),
+    };
     if (language.trim()) body.language = language.trim();
     if (validTxns.length > 0) {
       body.transaction_history = validTxns.map((t) => ({
@@ -253,252 +765,523 @@ export default function DashboardPage() {
         timestamp: t.timestamp || new Date().toISOString(),
       }));
     }
+    await submitBody(body);
+  }
 
+  async function handleJsonSubmit() {
     try {
-      const res = await fetch("/analyze-ticket", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data as ApiError);
-      } else {
-        setResponse(data as ApiResponse);
-      }
+      const parsed = JSON.parse(jsonInput);
+      await submitBody(parsed);
     } catch {
-      setError({ error: "Unable to reach the server. Is it running?" });
-    } finally {
-      setLoading(false);
+      setError({ error: "Invalid JSON. Please check your input." });
     }
   }
 
-  return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
-      {/* Header */}
-      <header className="mb-8 text-center sm:mb-10">
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">QueueStorm Investigator</h1>
-        <p className="mt-1.5 text-sm text-[var(--muted-foreground)] sm:text-base">
-          Submit a support ticket for automated analysis
-        </p>
-      </header>
+  const hasErrors =
+    error &&
+    error.details &&
+    error.details.length > 0;
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Ticket Details */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ticket Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label required>Ticket ID</Label>
-              <Input
-                placeholder="e.g. TKT-001"
-                value={ticketId}
-                onChange={(e) => setTicketId(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label>Language</Label>
-              <Input
-                placeholder="e.g. en, bn (optional)"
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label required>Complaint</Label>
-              <Textarea
-                placeholder="Describe the issue in detail..."
-                value={complaint}
-                onChange={(e) => setComplaint(e.target.value)}
-                required
-              />
-            </div>
-          </CardContent>
-        </Card>
+  // ── Templates row ──
+  const templatesRow = (
+    <div className="mb-5">
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+        Quick load
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {TICKET_TEMPLATES.map((tpl) => (
+          <button
+            key={tpl.ticket_id}
+            type="button"
+            onClick={() => fillTemplate(tpl)}
+            className={cn(
+              "inline-flex items-center gap-1 border-2 border-[var(--border)] px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
+              "shadow-neo-sm press-inner transition-all duration-150",
+              "bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]",
+            )}
+          >
+            <Zap className="h-2.5 w-2.5 shrink-0" />
+            {tpl.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
-        {/* Transaction History */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Transaction History</CardTitle>
-              <Button type="button" variant="outline" onClick={addTransaction}>
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Row</span>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {transactions.map((tx, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-1 gap-2 rounded-lg border border-[var(--border)] p-3 sm:grid-cols-6 sm:gap-2"
-              >
-                <Input
-                  placeholder="Tx ID"
-                  className="sm:col-span-1"
-                  value={tx.transaction_id}
-                  onChange={(e) => updateTransaction(i, "transaction_id", e.target.value)}
-                />
-                <Select
-                  className="sm:col-span-1"
-                  value={tx.type}
-                  onChange={(e) => updateTransaction(i, "type", e.target.value)}
+  // ── Input mode toggle ──
+  const modeToggle = (
+    <div className="mb-5 flex gap-1.5">
+      <button
+        type="button"
+        onClick={() => setInputMode("form")}
+        className={cn(
+          "inline-flex items-center gap-1.5 border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-150",
+          inputMode === "form"
+            ? "border-[var(--border)] bg-[var(--primary)] text-[var(--primary-foreground)] shadow-neo-sm"
+            : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]",
+        )}
+      >
+        <FileText className="h-3.5 w-3.5" />
+        Form
+      </button>
+      <button
+        type="button"
+        onClick={() => setInputMode("json")}
+        className={cn(
+          "inline-flex items-center gap-1.5 border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all duration-150",
+          inputMode === "json"
+            ? "border-[var(--border)] bg-[var(--primary)] text-[var(--primary-foreground)] shadow-neo-sm"
+            : "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted)]",
+        )}
+      >
+        <FileJson className="h-3.5 w-3.5" />
+        JSON
+      </button>
+    </div>
+  );
+
+  // ── Form ──
+  const formSection = inputMode === "form" && (
+    <form onSubmit={handleFormSubmit} className="space-y-6 sm:space-y-8">
+      {/* Ticket Details */}
+      <NeoCard macDots>
+        <NeoCardHeader>
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 shrink-0" />
+            <NeoCardTitle>Ticket Details</NeoCardTitle>
+          </div>
+        </NeoCardHeader>
+        <NeoCardContent className="space-y-5">
+          {templatesRow}
+          <div>
+            <NeoLabel htmlFor="ticketId" required>
+              Ticket ID
+            </NeoLabel>
+            <NeoInput
+              id="ticketId"
+              placeholder="e.g. TKT-001"
+              value={ticketId}
+              onChange={(e) => setTicketId(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <NeoLabel htmlFor="language">Language</NeoLabel>
+            <NeoInput
+              id="language"
+              placeholder="en, bn, or leave blank"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            />
+          </div>
+          <div>
+            <NeoLabel htmlFor="complaint" required>
+              Complaint
+            </NeoLabel>
+            <NeoTextarea
+              id="complaint"
+              placeholder="Describe the issue in detail..."
+              value={complaint}
+              onChange={(e) => setComplaint(e.target.value)}
+              required
+            />
+          </div>
+        </NeoCardContent>
+      </NeoCard>
+
+      {/* Transaction History */}
+      <NeoCard macDots>
+        <NeoCardHeader>
+          <div className="flex items-center justify-between">
+            <NeoCardTitle>Transaction History</NeoCardTitle>
+            <NeoButton
+              type="button"
+              variant="accent"
+              className="h-10 px-3 py-0 text-xs"
+              onClick={addTransaction}
+            >
+              <Plus className="h-4 w-4" />
+              Add Row
+            </NeoButton>
+          </div>
+        </NeoCardHeader>
+        <NeoCardContent className="space-y-3">
+          {transactions.length === 0 && (
+            <p className="py-4 text-center text-sm font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+              No transactions — add one above
+            </p>
+          )}
+          {transactions.map((tx, i) => (
+            <div
+              key={i}
+              className="grid grid-cols-2 gap-2 border-2 border-[var(--border)] bg-[var(--muted)] p-3 sm:grid-cols-6 sm:gap-2 sm:p-3"
+            >
+              <div className="col-span-2 sm:col-span-1">
+                <NeoLabel
+                  htmlFor={`tx-id-${i}`}
+                  className="mb-0.5 text-[10px]"
                 >
-                  <option value="send_money">Send Money</option>
-                  <option value="cash_in">Cash In</option>
-                  <option value="cash_out">Cash Out</option>
-                  <option value="payment">Payment</option>
-                  <option value="refund">Refund</option>
-                  <option value="transfer">Transfer</option>
-                </Select>
-                <Input
-                  placeholder="Amount"
+                  ID
+                </NeoLabel>
+                <NeoInput
+                  id={`tx-id-${i}`}
+                  placeholder="TXN-001"
+                  className="h-9 text-xs"
+                  value={tx.transaction_id}
+                  onChange={(e) =>
+                    updateTransaction(i, "transaction_id", e.target.value)
+                  }
+                />
+              </div>
+              <div className="col-span-1 sm:col-span-1">
+                <NeoLabel
+                  htmlFor={`tx-type-${i}`}
+                  className="mb-0.5 text-[10px]"
+                >
+                  Type
+                </NeoLabel>
+                <NeoSelect
+                  id={`tx-type-${i}`}
+                  className="h-9 text-xs"
+                  value={tx.type}
+                  onChange={(e) =>
+                    updateTransaction(i, "type", e.target.value)
+                  }
+                >
+                  {TX_TYPES.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </NeoSelect>
+              </div>
+              <div className="col-span-1 sm:col-span-1">
+                <NeoLabel
+                  htmlFor={`tx-amt-${i}`}
+                  className="mb-0.5 text-[10px]"
+                >
+                  Amount
+                </NeoLabel>
+                <NeoInput
+                  id={`tx-amt-${i}`}
+                  placeholder="5000"
                   type="number"
                   min="0"
-                  className="sm:col-span-1"
+                  className="h-9 text-xs"
                   value={tx.amount}
-                  onChange={(e) => updateTransaction(i, "amount", e.target.value)}
+                  onChange={(e) =>
+                    updateTransaction(i, "amount", e.target.value)
+                  }
                 />
-                <Select
-                  className="sm:col-span-1"
-                  value={tx.status}
-                  onChange={(e) => updateTransaction(i, "status", e.target.value)}
-                >
-                  <option value="completed">Completed</option>
-                  <option value="pending">Pending</option>
-                  <option value="failed">Failed</option>
-                  <option value="disputed">Disputed</option>
-                  <option value="reversed">Reversed</option>
-                </Select>
-                <Input
-                  placeholder="Timestamp (ISO)"
-                  className="sm:col-span-1"
-                  value={tx.timestamp}
-                  onChange={(e) => updateTransaction(i, "timestamp", e.target.value)}
-                />
-                <div className="flex items-center justify-end sm:col-span-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="h-10 w-10 p-0 text-red-500"
-                    onClick={() => removeTransaction(i)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+              <div className="col-span-1 sm:col-span-1">
+                <NeoLabel
+                  htmlFor={`tx-status-${i}`}
+                  className="mb-0.5 text-[10px]"
+                >
+                  Status
+                </NeoLabel>
+                <NeoSelect
+                  id={`tx-status-${i}`}
+                  className="h-9 text-xs"
+                  value={tx.status}
+                  onChange={(e) =>
+                    updateTransaction(i, "status", e.target.value)
+                  }
+                >
+                  {TX_STATUSES.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </NeoSelect>
+              </div>
+              <div className="col-span-1 sm:col-span-1">
+                <NeoLabel
+                  htmlFor={`tx-ts-${i}`}
+                  className="mb-0.5 text-[10px]"
+                >
+                  Timestamp
+                </NeoLabel>
+                <NeoInput
+                  id={`tx-ts-${i}`}
+                  placeholder="ISO date"
+                  className="h-9 text-xs"
+                  value={tx.timestamp}
+                  onChange={(e) =>
+                    updateTransaction(i, "timestamp", e.target.value)
+                  }
+                />
+              </div>
+              <div className="col-span-2 flex items-end justify-end sm:col-span-1">
+                <NeoButton
+                  type="button"
+                  variant="danger"
+                  className="h-9 w-full px-0 text-xs sm:w-auto sm:px-3"
+                  onClick={() => removeTransaction(i)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 sm:mr-1" />
+                  <span className="sm:hidden">Remove</span>
+                </NeoButton>
+              </div>
+            </div>
+          ))}
+        </NeoCardContent>
+      </NeoCard>
 
-        {/* Submit */}
-        <div className="flex justify-center">
-          <Button
-            type="submit"
-            loading={loading}
-            disabled={loading || !ticketId.trim() || !complaint.trim()}
-            className="min-w-[200px]"
-          >
-            {!loading && <Send className="h-4 w-4" />}
-            {loading ? "Analyzing..." : "Analyze Ticket"}
-          </Button>
-        </div>
-      </form>
+      {/* Submit */}
+      <div className="flex justify-center">
+        <NeoButton
+          type="submit"
+          variant="primary"
+          loading={loading}
+          disabled={loading || !ticketId.trim() || !complaint.trim()}
+          className="min-w-[220px] text-base"
+        >
+          {!loading && <Send className="h-4 w-4" />}
+          {loading ? "ANALYZING..." : "ANALYZE TICKET"}
+        </NeoButton>
+      </div>
+    </form>
+  );
 
+  // ── JSON input mode ──
+  const jsonSection = inputMode === "json" && (
+    <div className="space-y-6 sm:space-y-8">
+      <NeoCard macDots>
+        <NeoCardHeader>
+          <div className="flex items-center gap-3">
+            <FileJson className="h-5 w-5 shrink-0" />
+            <NeoCardTitle>JSON Input</NeoCardTitle>
+          </div>
+        </NeoCardHeader>
+        <NeoCardContent>
+          <p className="mb-3 text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+            Paste a valid ticket JSON object directly
+          </p>
+          <NeoTextarea
+            className="min-h-[320px] font-mono text-xs leading-relaxed"
+            value={jsonInput}
+            onChange={(e) => setJsonInput(e.target.value)}
+            placeholder='{"ticket_id": "TKT-001", ...}'
+          />
+        </NeoCardContent>
+      </NeoCard>
+
+      <div className="flex justify-center">
+        <NeoButton
+          type="button"
+          variant="primary"
+          loading={loading}
+          disabled={loading}
+          className="min-w-[220px] text-base"
+          onClick={handleJsonSubmit}
+        >
+          {!loading && <Send className="h-4 w-4" />}
+          {loading ? "ANALYZING..." : "ANALYZE TICKET"}
+        </NeoButton>
+      </div>
+    </div>
+  );
+
+  // ── Results ──
+  const resultsSection = (
+    <div className="space-y-5 sm:space-y-6">
       {/* Error */}
       {error && (
-        <Card className="mt-6 border-red-300 dark:border-red-800">
-          <CardHeader>
+        <NeoCard hover macDots>
+          <NeoCardHeader>
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 shrink-0 text-red-500" />
-              <CardTitle>Error</CardTitle>
+              <AlertCircle className="h-5 w-5 shrink-0 text-[var(--destructive)]" />
+              <NeoCardTitle className="text-sm sm:text-base">
+                Error
+              </NeoCardTitle>
             </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-red-600 dark:text-red-400">{error.error}</p>
-            {error.details && error.details.length > 0 && (
-              <ul className="mt-2 space-y-1">
-                {error.details.map((d, i) => (
-                  <li key={i} className="text-xs text-[var(--muted-foreground)]">
-                    <span className="font-medium">{d.field}</span>: {d.message}
+          </NeoCardHeader>
+          <NeoCardContent>
+            <p className="text-sm font-bold text-[var(--destructive)]">
+              {error.error}
+            </p>
+            {hasErrors && (
+              <ul className="mt-3 space-y-1" role="alert">
+                {error.details!.map((d, i) => (
+                  <li
+                    key={i}
+                    className="text-xs font-medium text-[var(--muted-foreground)]"
+                  >
+                    <span className="font-black uppercase">{d.field}</span>:{" "}
+                    {d.message}
                   </li>
                 ))}
               </ul>
             )}
-          </CardContent>
-        </Card>
+          </NeoCardContent>
+        </NeoCard>
       )}
 
       {/* Response */}
       {response && (
-        <div className="mt-8 space-y-5">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
-            <h2 className="text-lg font-semibold sm:text-xl">Analysis Result</h2>
-          </div>
-
-          {/* Badge row — wraps on mobile */}
-          <div className="flex flex-wrap gap-1.5">
-            <Badge className={VERDICT_STYLES[response.evidence_verdict] ?? ""}>
-              {response.evidence_verdict.replace(/_/g, " ")}
-            </Badge>
-            <Badge className={SEVERITY_STYLES[response.severity] ?? ""}>
-              {response.severity}
-            </Badge>
-            <Badge className="bg-[var(--accent)] text-[var(--accent-foreground)]">
-              {CASE_TYPE_LABELS[response.case_type] ?? response.case_type.replace(/_/g, " ")}
-            </Badge>
-            <Badge className="bg-[var(--accent)] text-[var(--accent-foreground)]">
-              {DEPARTMENT_LABELS[response.department] ?? response.department.replace(/_/g, " ")}
-            </Badge>
-            {response.human_review_required && (
-              <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                needs human review
-              </Badge>
+        <>
+          {/* Result header + timer */}
+          <div className="flex items-center justify-between gap-2 border-b-2 border-[var(--border)] pb-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-6 w-6 shrink-0 text-[var(--success)]" />
+              <h2 className="text-xl font-black uppercase tracking-tight sm:text-2xl">
+                Analysis Result
+              </h2>
+            </div>
+            {elapsedMs !== null && (
+              <span className="inline-flex shrink-0 items-center gap-1.5 border-2 border-[var(--border)] bg-[var(--card)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider shadow-neo-sm">
+                <Clock className="h-3 w-3" />
+                {elapsedMs < 1000
+                  ? `${elapsedMs}ms`
+                  : `${(elapsedMs / 1000).toFixed(1)}s`}
+              </span>
             )}
           </div>
 
+          {/* Badges */}
+          <div className="flex flex-wrap gap-2">
+            <NeoBadge
+              className={
+                VERDICT_STYLES[response.evidence_verdict] ?? ""
+              }
+            >
+              {response.evidence_verdict.replace(/_/g, " ")}
+            </NeoBadge>
+            <NeoBadge
+              className={SEVERITY_STYLES[response.severity] ?? ""}
+            >
+              {response.severity}
+            </NeoBadge>
+            <NeoBadge className={YELLOW_BADGE}>
+              {CASE_TYPE_LABELS[response.case_type] ??
+                response.case_type.replace(/_/g, " ")}
+            </NeoBadge>
+            <NeoBadge className={YELLOW_BADGE}>
+              {DEPARTMENT_LABELS[response.department] ??
+                response.department.replace(/_/g, " ")}
+            </NeoBadge>
+            {response.human_review_required && (
+              <NeoBadge className="bg-orange-500 text-white">
+                Needs Human Review
+              </NeoBadge>
+            )}
+          </div>
+
+          {/* Matched transaction */}
           {response.relevant_transaction_id && (
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Matched transaction: <code className="rounded bg-[var(--accent)] px-1 py-0.5 font-mono text-xs">{response.relevant_transaction_id}</code>
+            <p className="text-sm font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+              Matched transaction:{" "}
+              <code className="ml-1 border-2 border-[var(--border)] bg-[var(--accent)] px-2 py-0.5 font-mono text-xs text-black">
+                {response.relevant_transaction_id}
+              </code>
             </p>
           )}
 
           {/* Agent Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Agent Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed">{response.agent_summary}</p>
-            </CardContent>
-          </Card>
+          <NeoCard macDots>
+            <NeoCardHeader>
+              <NeoCardTitle className="text-sm sm:text-base">
+                Agent Summary
+              </NeoCardTitle>
+            </NeoCardHeader>
+            <NeoCardContent>
+              <p className="text-sm leading-relaxed font-medium">
+                {response.agent_summary}
+              </p>
+            </NeoCardContent>
+          </NeoCard>
 
           {/* Recommended Next Action */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recommended Next Action</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed whitespace-pre-line">{response.recommended_next_action}</p>
-            </CardContent>
-          </Card>
+          <NeoCard macDots>
+            <NeoCardHeader>
+              <NeoCardTitle className="text-sm sm:text-base">
+                Recommended Next Action
+              </NeoCardTitle>
+            </NeoCardHeader>
+            <NeoCardContent>
+              <p className="whitespace-pre-line text-sm leading-relaxed font-medium">
+                {response.recommended_next_action}
+              </p>
+            </NeoCardContent>
+          </NeoCard>
 
           {/* Customer Reply */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Customer Reply</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed whitespace-pre-line">{response.customer_reply}</p>
-            </CardContent>
-          </Card>
-        </div>
+          <NeoCard hover macDots>
+            <NeoCardHeader>
+              <NeoCardTitle className="text-sm sm:text-base">
+                Customer Reply
+              </NeoCardTitle>
+            </NeoCardHeader>
+            <NeoCardContent>
+              <p className="whitespace-pre-line text-sm leading-relaxed font-medium">
+                {response.customer_reply}
+              </p>
+            </NeoCardContent>
+          </NeoCard>
+        </>
       )}
+
+      {/* Raw JSON */}
+      {rawJson && <JsonOutput data={rawJson} />}
+    </div>
+  );
+
+  return (
+    <div className="relative mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+      {/* Health check — top-right */}
+      <div className="mb-4 flex items-start justify-end sm:mb-0 sm:absolute sm:right-6 sm:top-6 sm:z-10">
+        <HealthCheckButton />
+      </div>
+
+      {/* ── Hero ── */}
+      <NeoCard className="mb-8 text-center sm:mb-10" macDots>
+        <div className="px-6 py-8 sm:px-10 sm:py-10">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center border-2 border-[var(--border)] bg-[var(--accent)] shadow-neo-sm">
+            <Ticket className="h-7 w-7" />
+          </div>
+          <h1 className="text-3xl font-black uppercase tracking-tight sm:text-4xl">
+            QueueStorm
+            <br className="sm:hidden" /> Investigator
+          </h1>
+          <p className="mt-2 text-sm font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+            Submit a support ticket for automated analysis
+          </p>
+        </div>
+      </NeoCard>
+
+      {/* ── Two-column layout on large screens ── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
+        {/* Left: Form / JSON input */}
+        <div className="min-w-0">
+          {modeToggle}
+          {formSection}
+          {jsonSection}
+        </div>
+
+        {/* Right: Results */}
+        <div className="min-w-0">
+          {!response && !error && !rawJson && (
+            <div className="sticky top-8">
+              <NeoCard className="border-dashed border-[var(--input-border)] shadow-none" macDots>
+                <NeoCardContent>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Terminal className="mb-4 h-10 w-10 text-[var(--muted-foreground)]" />
+                    <p className="text-sm font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                      Results will appear here
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                      Submit a ticket to see the analysis
+                    </p>
+                  </div>
+                </NeoCardContent>
+              </NeoCard>
+            </div>
+          )}
+          {(response || error || rawJson !== null) && resultsSection}
+        </div>
+      </div>
     </div>
   );
 }
