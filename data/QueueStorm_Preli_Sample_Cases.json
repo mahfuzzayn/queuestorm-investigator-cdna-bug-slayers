@@ -1,0 +1,171 @@
+[
+  {
+    "ticket_id": "TKT-001",
+    "language": "en",
+    "complaint": "I received a call from someone claiming to be from bKash customer care. They asked me for my OTP and PIN. I gave them the OTP and now money is missing from my account.",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-001",
+        "type": "send_money",
+        "amount": 15000,
+        "currency": "BDT",
+        "status": "completed",
+        "timestamp": "2026-06-24T14:30:00Z",
+        "sender": "018XXXXXXXX",
+        "receiver": "019XXXXXXXX"
+      }
+    ]
+  },
+  {
+    "ticket_id": "TKT-002",
+    "language": "bn",
+    "complaint": "আমার একাউন্ট থেকে দুইবার টাকা কেটেছে। আমি ৫০০০ টাকা পাঠিয়েছিলাম কিন্তু দুইবার কেটে গেছে।",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-002a",
+        "type": "send_money",
+        "amount": 5000,
+        "currency": "BDT",
+        "status": "completed",
+        "timestamp": "2026-06-25T10:00:00Z",
+        "sender": "017XXXXXXXX",
+        "receiver": "016XXXXXXXX"
+      },
+      {
+        "transaction_id": "TXN-002b",
+        "type": "send_money",
+        "amount": 5000,
+        "currency": "BDT",
+        "status": "completed",
+        "timestamp": "2026-06-25T10:01:00Z",
+        "sender": "017XXXXXXXX",
+        "receiver": "016XXXXXXXX"
+      }
+    ]
+  },
+  {
+    "ticket_id": "TKT-003",
+    "language": "en",
+    "complaint": "I went to an agent to deposit 2000 taka into my bKash account. The agent took my cash but the money never arrived in my account.",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-003",
+        "type": "cash_in",
+        "amount": 2000,
+        "currency": "BDT",
+        "status": "pending",
+        "timestamp": "2026-06-26T09:00:00Z",
+        "sender": "Agent Point",
+        "receiver": "017XXXXXXXX"
+      }
+    ]
+  },
+  {
+    "ticket_id": "TKT-004",
+    "language": "en",
+    "complaint": "As a merchant, I have not received my settlement payment for the last 3 days. My customers have paid but the money is not showing in my merchant account.",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-004",
+        "type": "payment",
+        "amount": 35000,
+        "currency": "BDT",
+        "status": "completed",
+        "timestamp": "2026-06-23T16:00:00Z",
+        "sender": "Customer",
+        "receiver": "Merchant Account"
+      }
+    ]
+  },
+  {
+    "ticket_id": "TKT-005",
+    "language": "en",
+    "complaint": "I tried to send 2500 taka to my friend but the transaction failed. However, the money was deducted from my account balance.",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-005",
+        "type": "send_money",
+        "amount": 2500,
+        "currency": "BDT",
+        "status": "failed",
+        "timestamp": "2026-06-26T11:30:00Z",
+        "sender": "018XXXXXXXX",
+        "receiver": "019XXXXXXXX"
+      }
+    ]
+  },
+  {
+    "ticket_id": "TKT-006",
+    "language": "en",
+    "complaint": "I sent 10000 taka to a wrong number by mistake. I misdialed one digit and now the money went to someone else. Please help me get it back.",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-006",
+        "type": "send_money",
+        "amount": 10000,
+        "currency": "BDT",
+        "status": "completed",
+        "timestamp": "2026-06-26T08:15:00Z",
+        "sender": "017XXXXXXXX",
+        "receiver": "016XXXXXXXX"
+      }
+    ]
+  },
+  {
+    "ticket_id": "TKT-007",
+    "language": "en",
+    "complaint": "I would like to request a refund for a payment I made to a merchant. The product was not delivered and I want my money back.",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-007",
+        "type": "payment",
+        "amount": 8000,
+        "currency": "BDT",
+        "status": "completed",
+        "timestamp": "2026-06-20T14:00:00Z",
+        "sender": "018XXXXXXXX",
+        "receiver": "Merchant"
+      }
+    ]
+  },
+  {
+    "ticket_id": "TKT-008",
+    "language": "bn",
+    "complaint": "আমার bKash অ্যাকাউন্ট থেকে ৭০০০ টাকা কেটে গেছে কিন্তু আমি কোনো ট্রানজেকশন করিনি। আমি কিছু কিনিনি বা কাউকে টাকা পাঠাইনি। দয়া করে আমার টাকা ফেরত দিন।",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-008",
+        "type": "send_money",
+        "amount": 7000,
+        "currency": "BDT",
+        "status": "completed",
+        "timestamp": "2026-06-24T19:00:00Z",
+        "sender": "017XXXXXXXX",
+        "receiver": "019XXXXXXXX"
+      }
+    ]
+  },
+  {
+    "ticket_id": "TKT-009",
+    "language": "en",
+    "complaint": "I am just checking my account balance. Everything seems fine.",
+    "transaction_history": []
+  },
+  {
+    "ticket_id": "TKT-010",
+    "language": "en",
+    "complaint": "Yesterday I tried to cash out 15000 taka from an ATM but the machine dispensed less money. It showed successful on screen but I only got 14000.",
+    "transaction_history": [
+      {
+        "transaction_id": "TXN-010",
+        "type": "cash_out",
+        "amount": 15000,
+        "currency": "BDT",
+        "status": "completed",
+        "timestamp": "2026-06-25T13:00:00Z",
+        "sender": "017XXXXXXXX",
+        "channel": "atmx"
+      }
+    ]
+  }
+]

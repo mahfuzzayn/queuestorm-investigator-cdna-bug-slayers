@@ -1,0 +1,12 @@
+{
+  "ticket_id": "TKT-001",
+  "case_type": "phishing_or_social_engineering",
+  "department": "fraud_and_security",
+  "severity": "high",
+  "evidence_verdict": "insufficient_data",
+  "relevant_transaction_id": null,
+  "human_review_required": true,
+  "agent_summary": "Ticket TKT-001: possible phishing / social engineering attempt. The complaint cannot be fully verified due to insufficient transaction data. Severity assessed as high. Routed to fraud_and_security. Human review has been flagged as required.",
+  "recommended_next_action": "Immediately escalate to the fraud and security team. Advise the customer to change their PIN and MPIN immediately. Recommend blocking the affected account temporarily. Do not request any OTP, PIN, or password from the customer.",
+  "customer_reply": "Dear Customer,\n\nWe have received your report regarding a suspicious communication. Please do not share your OTP, PIN, or password with anyone. Our fraud and security team will review your case and take appropriate action. In the meantime, please change your MPIN through the official app. Your case has been flagged for human review, and a dedicated agent will follow up with you.\n\nIf you have any further questions, please contact our official customer support channels. Thank you for your patience."
+}
